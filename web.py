@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import uvicorn
 import cv2
 import numpy as np
@@ -30,6 +30,139 @@ class Driver(Base):
     name = Column(String(100))
 
 Base.metadata.create_all(bind=engine)
+
+@app.get("/", response_class=HTMLResponse)
+async def read_index():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>License Plate Recognition System</title>
+      <style>
+        /* Gradient background for the body */
+        body {
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          font-family: Arial, sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          background-repeat: no-repeat;
+          background-size: cover;
+        }
+        /* Glassmorphism container */
+        .container {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          padding: 20px;
+          width: 90%;
+          max-width: 600px;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+          text-align: center;
+          color: #fff;
+        }
+        h1 {
+          margin-bottom: 20px;
+        }
+        input[type="file"] {
+          display: block;
+          margin: 20px auto;
+        }
+        button {
+          padding: 10px 20px;
+          border: none;
+          background-color: #007BFF;
+          color: #fff;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+        button:hover {
+          background-color: #0056b3;
+        }
+        #preview {
+          margin-top: 20px;
+          max-width: 100%;
+          border-radius: 10px;
+          display: none;
+        }
+        #result {
+          margin-top: 20px;
+          color: #fff;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>License Plate Recognition System</h1>
+        <form id="uploadForm">
+          <input type="file" id="fileInput" name="file" accept="image/*" required>
+          <img id="preview" alt="License Plate Preview" />
+          <button type="submit">Upload and Process</button>
+        </form>
+        <div id="result"></div>
+      </div>
+      <script>
+        // Show a preview of the uploaded image immediately
+        const fileInput = document.getElementById("fileInput");
+        const preview = document.getElementById("preview");
+        fileInput.addEventListener("change", function(){
+            const file = this.files[0];
+            if(file){
+                const reader = new FileReader();
+                reader.onload = function(e){
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = "none";
+            }
+        });
+
+        // Submit the form and send the file to the /upload endpoint
+        const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+    
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const file = fileInput.files[0];
+          if(!file){
+            resultDiv.innerHTML = '<p style="color: red;">Please select an image file.</p>';
+            return;
+          }
+          const formData = new FormData();
+          formData.append('file', file);
+    
+          try {
+            resultDiv.innerHTML = '<p>Processing image, please wait...</p>';
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await response.json();
+            if (response.ok) {
+              resultDiv.innerHTML = `<h2>Driver Information</h2>
+                <p><strong>ID:</strong> ${data.id}</p>
+                <p><strong>License Plate:</strong> ${data.license_plate}</p>
+                <p><strong>Name:</strong> ${data.name}</p>`;
+            } else {
+              if(data.detected_license_plate != undefined || data.detected_license_plate != null){
+                resultDiv.innerHTML += `<p>License Plate: ${data.detected_license_plate}</p>`
+              }
+              resultDiv.innerHTML += `<p style="color: red;">Error: ${data.detail}</p>`;
+            }
+          } catch (error) {
+            resultDiv.innerHTML = `<p style="color: red;">An error occurred: ${error.message}</p>`;
+          }
+        });
+      </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.post("/upload")
 async def process_image(file: UploadFile = File(...)):
