@@ -30,22 +30,35 @@
       .sidebar.sidebar-hidden {
         transform: translateX(-100%);
       }
-      @media (max-width: 768px) {
-        .sidebar {
-          position: fixed;
-          height: 100%;
-          z-index: 1050;
-        }
-        #sidebarToggle {
-          display: block;
-        }
-      }
+
       #sidebarToggle {
         background: none;
         border: none;
         font-size: 1.5rem;
         cursor: pointer;
         display: none;
+      }
+
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      @media (max-width: 768px) {
+        .sidebar {
+          position: fixed;
+          height: 100%;
+          z-index: 1050;
+        }
+        .main {
+          margin-left: 250px;
+        }
+        aside.sidebar.sidebar-hidden + .main {
+          margin-left: 0 !important;
+        }
+        #sidebarToggle {
+          display: block;
+        }
       }
       .detection-container {
         background: #fff;
@@ -104,7 +117,7 @@
       </aside>
 
       <!-- Main Content -->
-      <div class="flex-grow-1 d-flex flex-column">
+      <div class="flex-grow-1 d-flex flex-column main">
         <header class="bg-white border-bottom d-flex align-items-center p-3">
           <button id="sidebarToggle" class="me-3">&#9776;</button>
           <h2 class="h6 m-0">License Plate Detection</h2>
