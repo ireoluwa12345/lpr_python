@@ -6,3 +6,4 @@ paddleocr
 sqlalchemy
 pymysql
 dotenv
+pydantic

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drivers Database</title>
+    <style>
+      /* ===== Layout ===== */
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        height: 100%;
+        background-color: #f3f4f6;
+      }
+      .container {
+        display: flex;
+        height: 100vh;
+      }
+      aside.sidebar {
+        width: 250px;
+        background: #fff;
+        border-right: 1px solid #e5e7eb;
+        padding: 1rem;
+        box-sizing: border-box;
+        transition: transform 0.3s ease-in-out;
+      }
+      aside.sidebar.hidden {
+        transform: translateX(-100%);
+      }
+      .sidebar-header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #111827;
+      }
+      nav ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 2rem;
+      }
+      nav ul li {
+        margin-bottom: 1rem;
+      }
+      nav ul li a {
+        text-decoration: none;
+        color: #374151;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        display: block;
+        border-radius: 4px;
+      }
+      nav ul li a.active,
+      nav ul li a:hover {
+        background: #eff6ff;
+        color: #2563eb;
+      }
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+      }
+      header h2 {
+        margin: 0 0 0 1rem;
+        font-size: 1.125rem;
+        color: #111827;
+      }
+      #sidebarToggle {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: none;
+      }
+      @media (max-width: 768px) {
+        aside.sidebar {
+          position: fixed;
+          height: 100%;
+          z-index: 1000;
+        }
+        #sidebarToggle {
+          display: block;
+        }
+      }
+      main {
+        padding: 1rem;
+        overflow-y: auto;
+        flex: 1;
+      }
+      /* ===== Breadcrumb Styles ===== */
+      .breadcrumb {
+        padding: 0.75rem 1rem;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .breadcrumb ol {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+      }
+      .breadcrumb li {
+        margin-right: 0.5rem;
+      }
+      .breadcrumb li + li:before {
+        content: ">";
+        margin-right: 0.5rem;
+        color: #6b7280;
+      }
+      .breadcrumb a {
+        text-decoration: none;
+        color: #2563eb;
+      }
+      .breadcrumb li.active {
+        color: #6b7280;
+      }
+      /* ===== Drivers Table & Toolbar ===== */
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+      .toolbar input[type="text"] {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        flex: 1;
+        min-width: 200px;
+      }
+      .toolbar button {
+        padding: 0.5rem 1rem;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      th,
+      td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.9rem;
+      }
+      th {
+        background: #f9fafb;
+        color: #6b7280;
+        text-transform: uppercase;
+      }
+      tr:hover {
+        background: #f3f4f6;
+      }
+      .action-btn {
+        border: none;
+        background: none;
+        cursor: pointer;
+        margin-right: 0.5rem;
+      }
+      .action-btn.edit {
+        color: #2563eb;
+      }
+      .action-btn.delete {
+        color: #dc2626;
+      }
+      /* ===== Modal Styles ===== */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+      .modal-content {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+      }
+      .modal-content h3 {
+        margin-top: 0;
+        color: #111827;
+      }
+      .modal-content form label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #374151;
+      }
+      .modal-content form input,
+      .modal-content form select {
+        width: 100%;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+      }
+      .modal-content form button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      #driverSubmit {
+        background: #2563eb;
+        color: #fff;
+      }
+      #driverCancel {
+        background: #e5e7eb;
+        margin-left: 0.5rem;
+      }
+      .close {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.75rem;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <h1>Vehicle Dashboard</h1>
+        </div>
+        <nav>
+          <ul>
+            <li><a href="/">License Plate Detection</a></li>
+            <li><a href="/drivers" class="active">Drivers Database</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="main">
+        <header>
+          <button id="sidebarToggle">&#9776;</button>
+          <h2>Drivers Database</h2>
+        </header>
+
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb" aria-label="breadcrumb">
+          <ol>
+            <li><a href="/">Vehicle Dashboard</a></li>
+            <li class="active" aria-current="page">Drivers Database</li>
+          </ol>
+        </nav>
+
+        <main>
+          <div class="drivers-container">
+            <div class="toolbar">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search drivers..."
+              />
+              <button id="addDriverButton">Add Driver</button>
+            </div>
+            <table id="driversTable">
+              <thead>
+                <tr>
+                  <th>Driver</th>
+                  <th>License Plate</th>
+                  <th>Vehicle</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Driver rows will be inserted here dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Modal for Add/Edit Driver -->
+          <div id="driverModal" class="modal" style="display: none">
+            <div class="modal-content">
+              <span class="close" id="modalClose">&times;</span>
+              <h3 id="modalTitle">Add New Driver</h3>
+              <form id="driverForm">
+                <label>
+                  Name:
+                  <input type="text" id="driverName" required />
+                </label>
+                <label>
+                  License Plate:
+                  <input type="text" id="driverLicensePlate" required />
+                </label>
+                <label>
+                  Passport:
+                  <input type="file" id="driverPassport" required />
+                </label>
+                <label>
+                  Vehicle Model:
+                  <input type="text" id="driverVehicleModel" required />
+                </label>
+                <label>
+                  Registration Date:
+                  <input type="date" id="driverRegistrationDate" required />
+                </label>
+                <label>
+                  Status:
+                  <select id="driverStatus">
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </label>
+                <button type="submit" id="driverSubmit">Add</button>
+                <button type="button" id="driverCancel">Cancel</button>
+              </form>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      // Sidebar toggle
+      const sidebar = document.getElementById("sidebar");
+      const sidebarToggle = document.getElementById("sidebarToggle");
+      let drivers = [];
+      sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("hidden");
+      });
+
+      // Breadcrumb update function
+      const defaultBreadcrumb = [
+        { text: "Vehicle Dashboard", href: "/" },
+        { text: "Drivers Database", active: true },
+      ];
+
+      function updateBreadcrumb(items) {
+        const breadcrumbOl = document.querySelector(".breadcrumb ol");
+        breadcrumbOl.innerHTML = "";
+        items.forEach((item) => {
+          const li = document.createElement("li");
+          if (item.href && !item.active) {
+            const a = document.createElement("a");
+            a.href = item.href;
+            a.textContent = item.text;
+            li.appendChild(a);
+          } else {
+            li.textContent = item.text;
+            li.classList.add("active");
+            li.setAttribute("aria-current", "page");
+          }
+          breadcrumbOl.appendChild(li);
+        });
+      }
+
+      // Set default breadcrumb on page load
+      updateBreadcrumb(defaultBreadcrumb);
+
+      // Mock initial drivers data
+      async function fetchDrivers() {
+        try {
+          const response = await fetch("/get_drivers");
+          const data = await response.json();
+          drivers = data;
+          renderDrivers();
+        } catch (error) {
+          console.error("Error fetching drivers:", error);
+        }
+      }
+
+      fetchDrivers();
+
+      let editingDriverId = null;
+
+      const driversTableBody = document.querySelector("#driversTable tbody");
+      const searchInput = document.getElementById("searchInput");
+      const addDriverButton = document.getElementById("addDriverButton");
+
+      // Modal elements
+      const driverModal = document.getElementById("driverModal");
+      const modalClose = document.getElementById("modalClose");
+      const modalTitle = document.getElementById("modalTitle");
+      const driverForm = document.getElementById("driverForm");
+      const driverName = document.getElementById("driverName");
+      const driverLicensePlate = document.getElementById("driverLicensePlate");
+      const driverPassport = document.getElementById("driverPassport");
+      const driverVehicleModel = document.getElementById("driverVehicleModel");
+      const driverRegistrationDate = document.getElementById(
+        "driverRegistrationDate"
+      );
+      const driverStatus = document.getElementById("driverStatus");
+      const driverSubmit = document.getElementById("driverSubmit");
+      const driverCancel = document.getElementById("driverCancel");
+
+      // Render drivers in table based on search filter
+      function renderDrivers() {
+        if (drivers.length === 0) {
+          driversTableBody.innerHTML =
+            "<tr><td colspan='6'>No drivers found</td></tr>";
+          return;
+        } else {
+          const filter = searchInput.value.toLowerCase();
+          driversTableBody.innerHTML = "";
+          drivers
+            .filter(
+              (driver) =>
+                driver.name.toLowerCase().includes(filter) ||
+                driver.license_plate.toLowerCase().includes(filter) ||
+                driver.vehicle_model.toLowerCase().includes(filter)
+            )
+            .forEach((driver) => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>${driver.name}</td>
+                <td><code>${driver.license_plate}</code></td>
+                <td>${driver.vehicle_model}</td>
+                <td>${new Date(
+                  driver.registration_date
+                ).toLocaleDateString()}</td>
+                <td>${
+                  driver.status.charAt(0).toUpperCase() + driver.status.slice(1)
+                }</td>
+                <td>
+                  <button class="action-btn edit" data-id="${
+                    driver.id
+                  }">Edit</button>
+                  <button class="action-btn delete" data-id="${
+                    driver.id
+                  }">Delete</button>
+                </td>
+              `;
+              driversTableBody.appendChild(tr);
+            });
+        }
+      }
+
+      // Open modal for add/edit and update breadcrumb accordingly
+      function openModal(driver = null) {
+        if (driver) {
+          editingDriverId = driver.id;
+          modalTitle.textContent = "Edit Driver";
+          driverName.value = driver.name;
+          driverLicensePlate.value = driver.license_plate;
+          driverVehicleModel.value = driver.vehicle_model;
+          driverRegistrationDate.value = driver.registration_date;
+          driverStatus.value = driver.status;
+          driverPassport.removeAttribute("required");
+          driverSubmit.textContent = "Update";
+          updateBreadcrumb([
+            { text: "Vehicle Dashboard", href: "/" },
+            { text: "Drivers Database", href: "/drivers" },
+            { text: "Edit Driver", active: true },
+          ]);
+        } else {
+          editingDriverId = null;
+          modalTitle.textContent = "Add New Driver";
+          driverPassport.setAttribute("required", "");
+          driverForm.reset();
+          driverRegistrationDate.value = new Date().toISOString().split("T")[0];
+          driverSubmit.textContent = "Add";
+          updateBreadcrumb([
+            { text: "Vehicle Dashboard", href: "/" },
+            { text: "Drivers Database", href: "/drivers" },
+            { text: "Add Driver", active: true },
+          ]);
+        }
+        driverModal.style.display = "flex";
+      }
+
+      // Close modal and revert breadcrumb to default
+      function closeModal() {
+        driverModal.style.display = "none";
+        editingDriverId = null;
+        updateBreadcrumb(defaultBreadcrumb);
+      }
+
+      // Handle form submit for add/edit
+      driverForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append("name", driverName.value);
+        formData.append("license_plate", driverLicensePlate.value);
+        if (driverPassport.files.length > 0) {
+          formData.append("image", driverPassport.files[0]);
+        }
+        formData.append("vehicle_model", driverVehicleModel.value);
+        formData.append("registration_date", driverRegistrationDate.value);
+        formData.append("status", driverStatus.value);
+        if (editingDriverId) {
+          formData.append("id", editingDriverId);
+        }
+
+        const endpoint = editingDriverId
+          ? "/update_driver"
+          : "/register_driver";
+
+        fetch(endpoint, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              if (editingDriverId) {
+                const index = drivers.findIndex(
+                  (d) => d.id === editingDriverId
+                );
+                drivers[index] = { ...drivers[index], ...data.driver };
+              } else {
+                drivers.push(data.driver);
+              }
+              fetchDrivers();
+              closeModal();
+            } else {
+              alert("Failed to save driver data.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("An error occurred while saving driver data.");
+          });
+      });
+
+      // Event listeners for table actions
+      driversTableBody.addEventListener("click", (e) => {
+        if (e.target.classList.contains("edit")) {
+          const id = e.target.getAttribute("data-id");
+          const existingDriver = drivers.find((d) => d.id === parseInt(id));
+          openModal(existingDriver);
+        }
+        if (e.target.classList.contains("delete")) {
+          const id = e.target.getAttribute("data-id");
+          deleteDriver(id);
+        }
+      });
+
+      // Search filter event
+      searchInput.addEventListener("input", renderDrivers);
+
+      // Open modal when clicking Add Driver button
+      addDriverButton.addEventListener("click", () => openModal());
+
+      // Close modal on clicking X or Cancel
+      modalClose.addEventListener("click", closeModal);
+      driverCancel.addEventListener("click", closeModal);
+
+      // Delete driver
+      function deleteDriver(id) {
+        if (confirm("Are you sure you want to delete this driver?")) {
+          const did = parseInt(id);
+          fetch(`/delete_driver?id=${id}`, {
+            method: "POST",
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                drivers = drivers.filter((driver) => driver.id !== did);
+                fetchDrivers();
+              } else {
+                alert("Failed to delete driver.");
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              alert("An error occurred while deleting driver.");
+            });
+        }
+      }
+    </script>
+  </body>
+</html>

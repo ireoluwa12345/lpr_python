@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>License Plate Detection</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* Custom styles */
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #f3f4f6;
+      }
+      .sidebar {
+        width: 250px;
+        background: #fff;
+        border-right: 1px solid #e5e7eb;
+        padding: 1rem;
+        box-sizing: border-box;
+        transition: transform 0.3s ease-in-out;
+      }
+      /* Renamed to avoid potential conflicts */
+      .sidebar.sidebar-hidden {
+        transform: translateX(-100%);
+      }
+      @media (max-width: 768px) {
+        .sidebar {
+          position: fixed;
+          height: 100%;
+          z-index: 1050;
+        }
+        #sidebarToggle {
+          display: block;
+        }
+      }
+      #sidebarToggle {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: none;
+      }
+      .detection-container {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        max-width: 800px;
+        margin: auto;
+      }
+      .upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        color: #6b7280;
+        position: relative;
+        cursor: pointer;
+      }
+      .upload-area input[type="file"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .preview-container {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+      .preview-container img {
+        max-width: 100%;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="d-flex" style="height: 100vh">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="mb-4">
+          <h1 class="h5">Vehicle Dashboard</h1>
+        </div>
+        <nav>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a href="/" class="nav-link active">License Plate Detection</a>
+            </li>
+            <li class="nav-item">
+              <a href="/drivers" class="nav-link">Drivers Database</a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <div class="flex-grow-1 d-flex flex-column">
+        <header class="bg-white border-bottom d-flex align-items-center p-3">
+          <button id="sidebarToggle" class="me-3">&#9776;</button>
+          <h2 class="h6 m-0">License Plate Detection</h2>
+        </header>
+        <main class="p-3 flex-grow-1" style="overflow-y: auto">
+          <div class="detection-container">
+            <h3 class="h5">License Plate Detection</h3>
+            <p>
+              Upload an image of a vehicle to detect the license plate number.
+            </p>
+            <form id="detectionForm">
+              <div id="uploadArea" class="upload-area mb-3">
+                <p>Click to upload or drag and drop</p>
+                <small>PNG, JPG up to 10MB</small>
+                <input
+                  type="file"
+                  id="fileInput"
+                  accept="image/png, image/jpeg"
+                />
+              </div>
+              <div
+                id="previewContainer"
+                class="preview-container mb-3"
+                style="display: none"
+              >
+                <img id="previewImage" src="" alt="Preview" />
+                <br />
+                <button
+                  type="button"
+                  id="resetButton"
+                  class="btn btn-secondary mt-2"
+                >
+                  Reset
+                </button>
+              </div>
+              <div id="actionContainer" class="mb-3">
+                <button
+                  type="submit"
+                  id="detectButton"
+                  class="btn btn-primary w-100"
+                  style="display: none"
+                >
+                  Detect License Plate
+                </button>
+              </div>
+            </form>
+            <div id="statusMessage"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Sidebar toggle for mobile
+      const sidebar = document.getElementById("sidebar");
+      const sidebarToggle = document.getElementById("sidebarToggle");
+      sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-hidden");
+      });
+
+      // License Plate Detection functionality
+      const fileInput = document.getElementById("fileInput");
+      const previewContainer = document.getElementById("previewContainer");
+      const previewImage = document.getElementById("previewImage");
+      const resetButton = document.getElementById("resetButton");
+      const detectButton = document.getElementById("detectButton");
+      const detectionForm = document.getElementById("detectionForm");
+      const statusMessage = document.getElementById("statusMessage");
+      const uploadArea = document.getElementById("uploadArea");
+
+      let selectedFile = null;
+
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          selectedFile = file;
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            previewImage.src = event.target.result;
+            previewContainer.style.display = "block";
+            detectButton.style.display = "block";
+            statusMessage.textContent = "";
+            uploadArea.style.display = "none";
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      resetButton.addEventListener("click", () => {
+        selectedFile = null;
+        fileInput.value = "";
+        previewContainer.style.display = "none";
+        detectButton.style.display = "none";
+        statusMessage.textContent = "";
+        uploadArea.style.display = "block";
+      });
+
+      detectionForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!selectedFile) return;
+        detectButton.disabled = true;
+        statusMessage.textContent = "Processing image...";
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        try {
+          const response = await fetch("/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+          detectButton.disabled = false;
+
+          if (response.ok) {
+            if (result.driver_found == false) {
+              if (result.detected == true) {
+                statusMessage.innerHTML = `<div style="padding:1rem; background:#ecfdf5; border:1px solid #d1fae5; border-radius:4px; color:#065f46;">
+                  Detection successful!<br /><strong style="font-size:1.5rem; letter-spacing:2px;">${result.detected_license_plate}</strong>
+                </div>`;
+              } else {
+                statusMessage.innerHTML = `<div style="padding:1rem; background:#ecfdf5; border:1px solid #d1fae5; border-radius:4px; color:#065f46;"></div>`;
+              }
+            } else {
+              statusMessage.innerHTML = `<div style="padding:1rem; background:#ecfdf5; border:1px solid #d1fae5; border-radius:4px; color:#065f46;">
+                  Detection successful!<br /><strong style="font-size:1.5rem; letter-spacing:2px;">${result.license_plate}</strong>
+                </div>`;
+              const driversList = `
+                <li style="margin-bottom:1rem;">
+                  <div style="display:flex; align-items:center;">
+                    <img src="${result.image_url}" alt="${result.name}" style="width:50px; height:50px; border-radius:50%; margin-right:1rem;" />
+                    <div>
+                      <strong>${result.name}</strong><br />
+                      License Plate: ${result.license_plate}
+                    </div>
+                  </div>
+                </li>
+              `;
+              statusMessage.innerHTML += `
+              <div class="card mt-3">
+                <div class="card-body">
+                  <h5 class="card-title">Drivers Information:</h5>
+                  <ul class="list-unstyled mb-0">
+                    ${driversList}
+                  </ul>
+                </div>
+              </div>`;
+            }
+          } else {
+            statusMessage.innerHTML = `<div style="padding:1rem; background:#fef2f2; border:1px solid #fecaca; border-radius:4px; color:#991b1b;">
+              Detection failed. ${
+                result.error ||
+                "Could not detect a license plate. Please try with another image."
+              }
+              <br /><button id="tryAgain" class="btn btn-danger mt-2">Try again</button>
+            </div>`;
+            document
+              .getElementById("tryAgain")
+              .addEventListener("click", () => {
+                statusMessage.textContent = "";
+              });
+          }
+        } catch (error) {
+          detectButton.disabled = false;
+          statusMessage.innerHTML = `<div style="padding:1rem; background:#fef2f2; border:1px solid #fecaca; border-radius:4px; color:#991b1b;">
+            Detection failed. An error occurred. Please try again.
+            <br /><button id="tryAgain" class="btn btn-danger mt-2">Try again</button>
+          </div>`;
+          document.getElementById("tryAgain").addEventListener("click", () => {
+            statusMessage.textContent = "";
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
